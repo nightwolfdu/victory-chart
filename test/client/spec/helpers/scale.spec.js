@@ -120,6 +120,14 @@ describe("helpers/scale", () => {
       expect(scaleType).to.equal("log");
     });
 
+    it("returns a string value given a string prop", () => {
+      const props = {scale: {x: "linear"}};
+      const scaleType = Scale.getScaleType(props, "x");
+      expect(Scale.getScaleFromProps).calledWith(props, "x").and.returned(props.scale.x);
+      expect(Scale.getScaleTypeFromData).not.called;
+      expect(scaleType).to.equal("linear");
+    });
+
     it("uses data to distinguish between time and linear scales", () => {
       const props = {scale: {x: d3Scale.scaleLinear()}};
       const scaleType = Scale.getScaleType(props, "x");
