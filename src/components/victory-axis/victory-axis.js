@@ -1,5 +1,5 @@
-import { assign, defaults, isFunction, partialRight } from "lodash";
 import React, { PropTypes } from "react";
+import { assign, defaults, isFunction, partialRight } from "lodash";
 import {
   PropTypes as CustomPropTypes, Helpers, Events, VictoryTransition, VictoryLabel,
   VictoryContainer, VictoryTheme
@@ -7,6 +7,7 @@ import {
 import AxisLine from "./axis-line";
 import AxisHelpers from "./helper-methods";
 import Axis from "../../helpers/axis";
+import TextSize from "../../helpers/textsize";
 
 const fallbackProps = {
   width: 450,
@@ -97,6 +98,11 @@ export default class VictoryAxis extends React.Component {
         y: CustomPropTypes.domain
       })
     ]),
+    /**
+     * This fixLabelOverlap prop enable algorithm for overlapped ticks labels.
+     * This prop is useful when ticks amount much more than axis size.
+     */
+    fixLabelOverlap: PropTypes.bool,
     /**
      * The event prop take an array of event objects. Event objects are composed of
      * a target, an eventKey, and eventHandlers. Targets may be any valid style namespace
@@ -336,7 +342,8 @@ export default class VictoryAxis extends React.Component {
     theme: VictoryTheme.grayscale,
     tickCount: 5,
     containerComponent: <VictoryContainer />,
-    groupComponent: <g/>
+    groupComponent: <g/>,
+    fixLabelOverlap: false
   };
 
   static getDomain = AxisHelpers.getDomain.bind(AxisHelpers);
@@ -447,6 +454,36 @@ export default class VictoryAxis extends React.Component {
     return gridAndTickComponents;
   }
 
+  fixLabelOverlap(gridAndTicks, props) {
+    const isVertical = Axis.isVertical(props);
+    const size = isVertical ? props.height : props.width;
+    const labels = gridAndTicks.map((gridAndTick) => gridAndTick.props.children)
+     .reduce((accumulator, childArr) => accumulator.concat(childArr))
+     .filter((child) => child.type.name === "VictoryLabel")
+     .map((child) => child.props);
+    const paddingToObject = (padding) =>
+      typeof (padding) === "object"
+        ? Object.assign({}, {top: 0, right: 0, bottom: 0, left: 0}, padding)
+        : {top: padding, right: padding, bottom: padding, left: padding };
+    const labelsSumSize = labels.reduce((sum, label) => {
+      const padding = paddingToObject(label.style.padding);
+      const labelSize = TextSize.approximateTextSize(label.text, {
+        angle: label.angle,
+        fontSize: label.style.fontSize,
+        letterSpacing: label.style.letterSpacing,
+        fontFamily: label.style.fontFamily
+      });
+      return sum + (isVertical
+        ? labelSize.height + padding.top + padding.bottom
+        : labelSize.width + padding.right + padding.left);
+    }, 0);
+    const availiableLabelCount = Math.floor(size * gridAndTicks.length / labelsSumSize);
+    const divider = Math.ceil(gridAndTicks.length / availiableLabelCount) || 1;
+    return gridAndTicks.filter((gridAndTick, index) =>
+      index % divider === 0
+    );
+  }
+
   renderContainer(props, group) {
     const parentEvents = this.getEvents(props, "parent", "parent");
     const parentProps = defaults(
@@ -493,8 +530,12 @@ export default class VictoryAxis extends React.Component {
 
     const styleObject = theme && theme.axis && theme.axis.style ? theme.axis.style : {};
     const style = AxisHelpers.getStyles(props, styleObject);
+    const gridAndTicks = this.renderGridAndTicks(props);
+    const modifiedGridAndTicks = props.fixLabelOverlap
+      ? this.fixLabelOverlap(gridAndTicks, props)
+      : gridAndTicks;
     const children = [
-      ...this.renderGridAndTicks(props),
+      ...modifiedGridAndTicks,
       this.renderLine(props),
       this.renderLabel(props)
     ];
