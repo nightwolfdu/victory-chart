@@ -6,7 +6,6 @@ import {
 } from "victory-core";
 import AxisHelpers from "./helper-methods";
 import Axis from "../../helpers/axis";
-import TextSize from "../../helpers/textsize";
 
 const fallbackProps = {
   width: 450,
