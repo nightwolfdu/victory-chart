@@ -2,12 +2,11 @@ import React, { PropTypes } from "react";
 import { assign, defaults, isFunction, partialRight } from "lodash";
 import {
   PropTypes as CustomPropTypes, Helpers, Events, VictoryTransition, VictoryLabel,
-  VictoryContainer, VictoryTheme
+  VictoryContainer, VictoryTheme, TextSize
 } from "victory-core";
 import AxisLine from "./axis-line";
 import AxisHelpers from "./helper-methods";
 import Axis from "../../helpers/axis";
-import TextSize from "../../helpers/textsize";
 
 const fallbackProps = {
   width: 450,

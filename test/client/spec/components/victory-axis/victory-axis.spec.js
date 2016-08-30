@@ -9,8 +9,8 @@ import React from "react";
 import { omit } from "lodash";
 import { shallow, mount } from "enzyme";
 import SvgTestHelper from "../../../../svg-test-helper";
-import TextSize from "src/helpers/textsize";
 import VictoryAxis from "src/components/victory-axis/victory-axis";
+import { TextSize } from "victory-core";
 
 describe("components/victory-axis", () => {
   describe("default component rendering", () => {
