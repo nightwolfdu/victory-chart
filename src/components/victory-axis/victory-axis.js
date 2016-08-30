@@ -456,9 +456,10 @@ export default class VictoryAxis extends React.Component {
   fixLabelOverlap(gridAndTicks, props) {
     const isVertical = Axis.isVertical(props);
     const size = isVertical ? props.height : props.width;
+    const isVictoryLabel = (child) => child.type.name === "VictoryLabel";
     const labels = gridAndTicks.map((gridAndTick) => gridAndTick.props.children)
      .reduce((accumulator, childArr) => accumulator.concat(childArr))
-     .filter((child) => child.type.name === "VictoryLabel")
+     .filter(isVictoryLabel)
      .map((child) => child.props);
     const paddingToObject = (padding) =>
       typeof (padding) === "object"
@@ -478,9 +479,14 @@ export default class VictoryAxis extends React.Component {
     }, 0);
     const availiableLabelCount = Math.floor(size * gridAndTicks.length / labelsSumSize);
     const divider = Math.ceil(gridAndTicks.length / availiableLabelCount) || 1;
-    return gridAndTicks.filter((gridAndTick, index) =>
-      index % divider === 0
+    const getLabelCoord = (gridAndTick) => gridAndTick.props.children
+      .filter(isVictoryLabel)
+      .reduce((prev, child) => (isVertical ? child.props.y : child.props.x) || 0, 0);
+    const sorted = gridAndTicks.sort((a, b) => isVertical
+      ? getLabelCoord(b) - getLabelCoord(a) //ordinat axis has top-bottom orientation
+      : getLabelCoord(a) - getLabelCoord(b) //ordinat axis has left-right orientation
     );
+    return sorted.filter((gridAndTick, index) => index % divider === 0);
   }
 
   renderContainer(props, group) {
