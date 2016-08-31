@@ -162,9 +162,9 @@ describe("components/victory-axis", () => {
         expect(wrapper.find("[type=\"tick\"]").length).to.equal(2);
       });
 
-      it("renders ticks with similar gaps when ticks width sum greater then axis width", () => {
+      it("renders ticks with similar gaps when ticks height sum greater then axis height", () => {
         const wrapper = shallow(
-          <VictoryAxis tickValues={["1", "2", "3", "4"]} width={90} fixLabelOverlap
+          <VictoryAxis tickValues={["1", "2", "3", "4"]} height={90} fixLabelOverlap dependentAxis
             style={{ tickLabels: { padding: 0 } }}
           />
         );
