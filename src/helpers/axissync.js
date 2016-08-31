@@ -1,5 +1,5 @@
 import { TextSize } from "victory-core";
-import Axis from "src/helpers/axis";
+import Axis from "./axis";
 import { defaults } from "lodash";
 import * as d3Scale from "d3-scale";
 
