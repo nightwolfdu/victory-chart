@@ -1,13 +1,11 @@
-import { assign, defaults, partialRight, isFunction, min, max, filter } from "lodash";
+import { assign, defaults, partialRight, isFunction } from "lodash";
 import React, { PropTypes } from "react";
-import LineSegment from "./line-segment";
 import LineHelpers from "./helper-methods";
-import ClipPath from "../helpers/clip-path";
 import Domain from "../../helpers/domain";
 import Data from "../../helpers/data";
 import {
   PropTypes as CustomPropTypes, Helpers, Events, VictoryTransition, VictoryLabel,
-  VictoryContainer, VictoryTheme
+  VictoryContainer, VictoryTheme, DefaultTransitions, Curve, ClipPath
 } from "victory-core";
 
 const fallbackProps = {
@@ -19,43 +17,8 @@ const fallbackProps = {
 
 export default class VictoryLine extends React.Component {
   static displayName = "VictoryLine";
-
   static role = "line";
-
-  static defaultTransitions = {
-    onExit: {
-      duration: 500,
-      before: (datum) => ({ y: datum.y }),
-      beforeClipPathWidth: (data, child, exitingNodes) => {
-        const filterExit = filter(data, (datum, index) => !exitingNodes[index]);
-        const xVals = filterExit.map((datum) => {
-          return child.type.getScale(child.props).x(datum.x);
-        });
-        const clipPath = min(xVals) + max(xVals);
-        return clipPath;
-      }
-    },
-    onEnter: {
-      duration: 500,
-      before: () => ({ y: null }),
-      after: (datum) => ({ y: datum.y }),
-      beforeClipPathWidth: (data, child, enteringNodes) => {
-        const filterEnter = filter(data, (datum, index) => !enteringNodes[index]);
-        const xVals = filterEnter.map((datum) => {
-          return child.type.getScale(child.props).x(datum.x);
-        });
-        const clipPath = min(xVals) + max(xVals);
-        return clipPath;
-      },
-      afterClipPathWidth: (data, child) => {
-        const xVals = data.map((datum) => {
-          return child.type.getScale(child.props).x(datum.x);
-        });
-        const clipPath = min(xVals) + max(xVals);
-        return clipPath;
-      }
-    }
-  };
+  static defaultTransitions = DefaultTransitions.continuousTransitions();
 
   static propTypes = {
     /**
@@ -379,7 +342,7 @@ export default class VictoryLine extends React.Component {
     standalone: true,
     x: "x",
     y: "y",
-    dataComponent: <LineSegment/>,
+    dataComponent: <Curve/>,
     labelComponent: <VictoryLabel/>,
     containerComponent: <VictoryContainer/>,
     groupComponent: <g/>,
@@ -417,13 +380,12 @@ export default class VictoryLine extends React.Component {
       sharedEvents.getEventState : () => undefined;
   }
 
-  renderData(props) {
+  renderData(props) { // eslint-disable-line max-statements
     const { dataComponent, labelComponent, groupComponent, clipId } = props;
     const dataSegments = LineHelpers.getDataSegments(Data.getData(props));
     const lineComponents = [];
     const lineLabelComponents = [];
     for (let index = 0, len = dataSegments.length; index < len; index++) {
-    // return dataSegments.map((data, key) => {
       const data = dataSegments[index];
       const role = `${VictoryLine.role}-${index}`;
       const dataEvents = this.getEvents(props, "data", "all");
@@ -439,7 +401,8 @@ export default class VictoryLine extends React.Component {
         {}, dataProps, {events: Events.getPartialEvents(dataEvents, "all", dataProps)}
       ));
 
-      const labelProps = defaults(
+      if (this.baseProps.all.labels || this.props.events || this.props.sharedEvents) {
+        const labelProps = defaults(
           {index, key: `${role}-label-${index}`},
           this.getEventState("all", "labels"),
           this.getSharedEventState("all", "labels"),
@@ -447,11 +410,12 @@ export default class VictoryLine extends React.Component {
           labelComponent.props,
           this.baseProps.all.labels
         );
-      if (labelProps && labelProps.text) {
-        const labelEvents = this.getEvents(props, "labels", "all");
-        lineLabelComponents[index] = React.cloneElement(labelComponent, assign({
-          events: Events.getPartialEvents(labelEvents, "all", labelProps)
-        }, labelProps));
+        if (labelProps && labelProps.text) {
+          const labelEvents = this.getEvents(props, "labels", "all");
+          lineLabelComponents[index] = React.cloneElement(labelComponent, assign({
+            events: Events.getPartialEvents(labelEvents, "all", labelProps)
+          }, labelProps));
+        }
       }
     }
     return lineLabelComponents.length > 0 ?
@@ -477,14 +441,14 @@ export default class VictoryLine extends React.Component {
     );
   }
 
-  renderGroup(children, modifiedProps, style) {
-    const { clipPathComponent } = modifiedProps;
-
+  renderGroup(children, props, style) {
+    const { clipPathComponent } = props;
     const clipComponent = React.cloneElement(clipPathComponent, {
-      padding: modifiedProps.padding,
-      clipId: modifiedProps.clipId,
-      clipWidth: modifiedProps.clipWidth || modifiedProps.width,
-      clipHeight: modifiedProps.clipHeight || modifiedProps.height
+      padding: props.padding,
+      clipId: props.clipId,
+      translateX: props.translateX || 0,
+      clipWidth: props.clipWidth || props.width,
+      clipHeight: props.clipHeight || props.height
     });
 
     return React.cloneElement(
@@ -507,7 +471,7 @@ export default class VictoryLine extends React.Component {
       // TODO: extract into helper
       const whitelist = [
         "data", "domain", "height", "padding", "samples",
-        "style", "width", "x", "y", "clipWidth", "clipHeight"
+        "style", "width", "x", "y", "clipWidth", "clipHeight", "translateX"
       ];
       return (
         <VictoryTransition animate={animate} animationWhitelist={whitelist}>

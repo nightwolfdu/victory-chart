@@ -1,11 +1,10 @@
 import React, { PropTypes } from "react";
 import { assign, defaults, isFunction, partialRight } from "lodash";
-import Point from "./point";
 import Domain from "../../helpers/domain";
 import Data from "../../helpers/data";
 import {
   PropTypes as CustomPropTypes, Helpers, Events, VictoryTransition, VictoryLabel,
-  VictoryContainer, VictoryTheme
+  VictoryContainer, VictoryTheme, DefaultTransitions, Point
 } from "victory-core";
 import ScatterHelpers from "./helper-methods";
 
@@ -19,20 +18,8 @@ const fallbackProps = {
 
 export default class VictoryScatter extends React.Component {
   static displayName = "VictoryScatter";
-
   static role = "scatter";
-
-  static defaultTransitions = {
-    onExit: {
-      duration: 600,
-      before: () => ({ opacity: 0 })
-    },
-    onEnter: {
-      duration: 600,
-      before: () => ({ opacity: 0 }),
-      after: (datum) => ({ opacity: datum.opacity || 1 })
-    }
-  };
+  static defaultTransitions = DefaultTransitions.discreteTransitions();
 
   static propTypes = {
     /**
@@ -208,7 +195,7 @@ export default class VictoryScatter extends React.Component {
      * If given as an array, the number of elements in the array should be equal to
      * the length of the data array. Labels may also be added directly to the data object
      * like data={[{x: 1, y: 1, label: "first"}]}.
-     * @examples: ["spring", "summer", "fall", "winter"], (datum) => datum.title
+     * @examples ["spring", "summer", "fall", "winter"], (datum) => datum.title
      */
     labels: PropTypes.oneOfType([
       PropTypes.func,
@@ -406,7 +393,6 @@ export default class VictoryScatter extends React.Component {
     const pointLabelComponents = [];
     for (let index = 0, len = this.dataKeys.length; index < len; index++) {
       const key = this.dataKeys[index];
-    // this.dataKeys.forEach((key, index) => {
       const dataEvents = this.getEvents(props, "data", key);
       const dataProps = defaults(
         {index, key: `${role}-${key}`, role: `${role}-${index}`},
@@ -420,18 +406,20 @@ export default class VictoryScatter extends React.Component {
         {}, dataProps, {events: Events.getPartialEvents(dataEvents, key, dataProps)}
       ));
 
-      const labelProps = defaults(
-        {key: `scatter-label-${key}`, index},
-        this.getEventState(key, "labels"),
-        this.getSharedEventState(key, "labels"),
-        labelComponent.props,
-        this.baseProps[key].labels
-      );
-      if (labelProps && labelProps.text) {
-        const labelEvents = this.getEvents(props, "labels", key);
-        pointLabelComponents[index] = React.cloneElement(labelComponent, assign({
-          events: Events.getPartialEvents(labelEvents, key, labelProps)
-        }, labelProps));
+      if (this.baseProps[key].labels || this.props.events || this.props.sharedEvents) {
+        const labelProps = defaults(
+          {key: `scatter-label-${key}`, index},
+          this.getEventState(key, "labels"),
+          this.getSharedEventState(key, "labels"),
+          labelComponent.props,
+          this.baseProps[key].labels
+        );
+        if (labelProps && labelProps.text) {
+          const labelEvents = this.getEvents(props, "labels", key);
+          pointLabelComponents[index] = React.cloneElement(labelComponent, assign({
+            events: Events.getPartialEvents(labelEvents, key, labelProps)
+          }, labelProps));
+        }
       }
     }
 

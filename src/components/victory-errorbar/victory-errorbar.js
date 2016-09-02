@@ -1,10 +1,9 @@
 import React, { PropTypes } from "react";
 import {
   PropTypes as CustomPropTypes, Helpers, Events, VictoryTransition, VictoryLabel,
-  VictoryContainer, VictoryTheme
+  VictoryContainer, VictoryTheme, DefaultTransitions, ErrorBar
 } from "victory-core";
 import { assign, defaults, isFunction, partialRight } from "lodash";
-import ErrorBar from "./errorbar";
 import Data from "../../helpers/data";
 import ErrorBarHelpers from "./helper-methods";
 
@@ -23,20 +22,8 @@ const defaultData = [
 
 export default class VictoryErrorBar extends React.Component {
   static displayName = "VictoryErrorBar";
-
   static role = "errorBar";
-
-  static defaultTransitions = {
-    onExit: {
-      duration: 600,
-      before: () => ({ opacity: 0 })
-    },
-    onEnter: {
-      duration: 600,
-      before: () => ({ opacity: 0 }),
-      after: (datum) => ({ opacity: datum.opacity || 1 })
-    }
-  };
+  static defaultTransitions = DefaultTransitions.discreteTransitions();
 
   static propTypes = {
     /**
@@ -403,19 +390,21 @@ export default class VictoryErrorBar extends React.Component {
       errorBarComponents[index] = React.cloneElement(dataComponent, assign(
         {}, dataProps, {events: Events.getPartialEvents(dataEvents, key, dataProps)}
       ));
-      const labelProps = defaults(
-        {key: `${role}-label-${key}`, index},
-        this.getEventState(key, "labels"),
-        this.getSharedEventState(key, "labels"),
-        this.baseProps[key].labels,
-        labelComponent.props
-      );
-      if (labelProps && labelProps.text) {
-        const labelEvents = this.getEvents(props, "labels", key);
-        errorBarLabelComponents[index] = React.cloneElement(labelComponent, assign({
-          events: Events.getPartialEvents(labelEvents, key, labelProps)
-        }, labelProps));
 
+      if (this.baseProps[key].labels || this.props.events || this.props.sharedEvents) {
+        const labelProps = defaults(
+          {key: `${role}-label-${key}`, index},
+          this.getEventState(key, "labels"),
+          this.getSharedEventState(key, "labels"),
+          this.baseProps[key].labels,
+          labelComponent.props
+        );
+        if (labelProps && labelProps.text) {
+          const labelEvents = this.getEvents(props, "labels", key);
+          errorBarLabelComponents[index] = React.cloneElement(labelComponent, assign({
+            events: Events.getPartialEvents(labelEvents, key, labelProps)
+          }, labelProps));
+        }
       }
     }
 
