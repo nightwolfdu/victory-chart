@@ -6,11 +6,11 @@ describe("helpers/axissync", () => {
     it("return expected tick count, based on size of domain labels width", () => {
       expect(
         syncAxis(
-          [[124.123122222222, 3523], [124.123122222222, 3523]],
+          [[124.12312222, 3523], [124.123122222222, 3523]],
           {},
           { orientation: "bottom", width: 200 }
         )[0].length
-      ).to.be.eql(1);
+      ).to.be.eql(34);
     });
     it("return expected tick count, based on size of domain labels height", () => {
       expect(
