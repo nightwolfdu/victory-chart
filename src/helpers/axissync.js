@@ -1,66 +1,49 @@
 import { TextSize } from "victory-core";
 import Axis from "./axis";
-import { defaults, flatten, range, forEach } from "lodash";
+import { defaults, flatten, range } from "lodash";
 import * as d3Scale from "d3-scale";
 import * as d3 from "d3";
 
 const defaultFontSize = 12;
+const defaultAxisProps = {orientation: "bottom", width: 0};
 
 const getLongestString = (domains) =>
   flatten(domains)
     .map((elem) => String(elem))
     .reduce((longest, cur) => cur.length > longest.length ? cur : longest, "");
 
-
 const getTextSize = (longestString, labelStyle) =>
  TextSize.approximateTextSize(longestString, defaults(labelStyle, { fontSize: defaultFontSize }));
 
 const getSize = (isVertical, sizeObj) => isVertical ? sizeObj.height : sizeObj.width;
 
-const getExpectedLabelCount = (longestStringSize, axisProps) => {
-  const isVertical = Axis.isVertical(axisProps);
-  const size = (getSize(isVertical, axisProps)) || 0;
-  const textSize = getSize(isVertical, longestStringSize);
-  return Math.floor(size / textSize);
-};
-
-const getTicks = (domain, tickCount) =>
+const getTicksAndInterval = (domain, axisRange, tickCount) =>
   ({
-    ticks: d3Scale.scaleLinear().domain(domain).range(0, 400).ticks(tickCount),
+    ticks: d3Scale.scaleLinear().domain(domain).range(axisRange).ticks(tickCount),
     tickInterval: d3.tickStep(domain[0], domain[1], tickCount)
   });
 
 const syncTicks = (tickObject) => {
   const maxLength = Math.max.apply(null, tickObject.map((obj) => obj.ticks.length));
   return tickObject.map((obj) => {
-    const ticks = obj.ticks.concat(
-      range(0, maxLength - obj.ticks.length, 1)
-      .map((index) => obj.ticks[obj.ticks.length - 1] + obj.tickInterval * (index + 1))
-    );
-    return {
-      domain: [Math.min.apply(null, ticks), Math.max.apply(null, ticks)],
-      ticks
-    };
+    return range(maxLength).map((index) => obj.ticks[0] + obj.tickInterval * (index));
   });
 };
 
 const sync = (domains, labelStyle, axisProps) => {
-  return syncTicks(domains.map((domain) => {
-    const labelCount = getExpectedLabelCount(
-       getTextSize(getLongestString(domain)),
-       axisProps
-    );
-    return getTicks(domain, labelCount);
-  }));
+  const props = defaults(axisProps, defaultAxisProps);
+  const isVertical = Axis.isVertical(props);
+  const axisRange = getSize(isVertical, props);
+  return syncTicks(
+    domains.map((domain) => {
+      const labelCount = Math.max(
+        Math.floor(
+          (getSize(isVertical, props)) /
+          getSize(isVertical, getTextSize(getLongestString(domain), labelStyle))
+        ),
+      2);
+      return getTicksAndInterval(domain, axisRange, labelCount);
+    }));
 };
 
-export default {
-  sync,
-  syncTicks,
-  getTicks,
-  getExpectedLabelCount,
-  getTextSize,
-  getLongestString
-};
-
-//scale types. .time(), "linear", "time", "log", "sqrt"
+export default sync;
