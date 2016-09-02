@@ -1,6 +1,6 @@
 import { TextSize } from "victory-core";
 import Axis from "./axis";
-import { defaults, flatten } from "lodash";
+import { defaults, flatten, range, forEach } from "lodash";
 import * as d3Scale from "d3-scale";
 import * as d3 from "d3";
 
@@ -33,11 +33,10 @@ const getTicks = (domain, tickCount) =>
 const syncTicks = (tickObject) => {
   const maxLength = Math.max.apply(null, tickObject.map((obj) => obj.ticks.length));
   return tickObject.map((obj) => {
-    const needLength = maxLength - obj.ticks.length;
-    const ticks = obj.ticks.slice(0);
-    for (let index = 0; index < needLength; index++) {
-      ticks.push(ticks[ticks.length - 1] + obj.tickInterval);
-    }
+    const ticks = obj.ticks.concat(
+      range(0, maxLength - obj.ticks.length, 1)
+      .map((index) => obj.ticks[obj.ticks.length - 1] + obj.tickInterval * (index + 1))
+    );
     return {
       domain: [Math.min.apply(null, ticks), Math.max.apply(null, ticks)],
       ticks
