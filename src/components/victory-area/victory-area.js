@@ -1,13 +1,11 @@
-import { assign, isFunction, defaults, partialRight, min, max, filter } from "lodash";
+import { assign, isFunction, defaults, partialRight } from "lodash";
 import React, { PropTypes } from "react";
-import Area from "./area";
 import AreaHelpers from "./helper-methods";
 import Data from "../../helpers/data";
 import Domain from "../../helpers/domain";
-import ClipPath from "../helpers/clip-path";
 import {
   PropTypes as CustomPropTypes, Helpers, Events, VictoryTransition, VictoryLabel,
-  VictoryContainer, VictoryTheme
+  VictoryContainer, VictoryTheme, DefaultTransitions, Area, ClipPath
 } from "victory-core";
 
 const fallbackProps = {
@@ -19,41 +17,8 @@ const fallbackProps = {
 
 export default class VictoryArea extends React.Component {
   static displayName = "VictoryArea";
-
   static role = "area";
-
-  static defaultTransitions = {
-    onExit: {
-      duration: 500,
-      beforeClipPathWidth: (data, child, exitingNodes) => {
-        const filterExit = filter(data, (datum, index) => !exitingNodes[index]);
-        const xVals = filterExit.map((datum) => {
-          return child.type.getScale(child.props).x(datum.x);
-        });
-        const clipPath = min(xVals) + max(xVals);
-        return clipPath;
-      }
-    },
-    onEnter: {
-      duration: 500,
-      beforeClipPathWidth: (data, child, enteringNodes) => {
-        const filterEnter = filter(data, (datum, index) => !enteringNodes[index]);
-        const xVals = filterEnter.map((datum) => {
-          return child.type.getScale(child.props).x(datum.x);
-        });
-        const clipPath = min(xVals) + max(xVals);
-        return clipPath;
-
-      },
-      afterClipPathWidth: (data, child) => {
-        const xVals = data.map((datum) => {
-          return child.type.getScale(child.props).x(datum.x);
-        });
-        const clipPath = min(xVals) + max(xVals);
-        return clipPath;
-      }
-    }
-  };
+  static defaultTransitions = DefaultTransitions.continuousTransitions();
 
   static propTypes = {
     /**
@@ -424,19 +389,21 @@ export default class VictoryArea extends React.Component {
       {}, dataProps, {events: Events.getPartialEvents(dataEvents, "all", dataProps)}
     ));
 
-    const labelProps = defaults(
+    if (this.baseProps.all.labels || this.props.events || this.props.sharedEvents) {
+      const labelProps = defaults(
         {},
         this.getEventState("all", "labels"),
         this.getSharedEventState("all", "labels"),
         labelComponent.props,
         this.baseProps.all.labels
       );
-    if (labelProps && labelProps.text) {
-      const labelEvents = this.getEvents(props, "labels", "all");
-      const areaLabel = React.cloneElement(labelComponent, assign({
-        events: Events.getPartialEvents(labelEvents, "all", labelProps)
-      }, labelProps));
-      return React.cloneElement(groupComponent, {}, areaComponent, areaLabel);
+      if (labelProps && labelProps.text) {
+        const labelEvents = this.getEvents(props, "labels", "all");
+        const areaLabel = React.cloneElement(labelComponent, assign({
+          events: Events.getPartialEvents(labelEvents, "all", labelProps)
+        }, labelProps));
+        return React.cloneElement(groupComponent, {}, areaComponent, areaLabel);
+      }
     }
     return areaComponent;
   }
@@ -465,6 +432,7 @@ export default class VictoryArea extends React.Component {
     const clipComponent = React.cloneElement(clipPathComponent, {
       padding: props.padding,
       clipId: props.clipId,
+      translateX: props.translateX || 0,
       clipWidth: props.clipWidth || props.width,
       clipHeight: props.clipHeight || props.height
     });
@@ -484,7 +452,8 @@ export default class VictoryArea extends React.Component {
 
     if (animate) {
       const whitelist = [
-        "data", "domain", "height", "padding", "style", "width", "clipWidth", "clipHeight"
+        "data", "domain", "height", "padding", "style", "width",
+        "x", "y", "clipWidth", "clipHeight", "translateX"
       ];
       return (
         <VictoryTransition animate={animate} animationWhitelist={whitelist}>

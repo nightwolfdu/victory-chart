@@ -1,13 +1,11 @@
 import { assign, defaults, isFunction, partialRight } from "lodash";
 import React, { PropTypes } from "react";
-import Bar from "./bar";
 import BarHelpers from "./helper-methods";
 import Data from "../../helpers/data";
 import Domain from "../../helpers/domain";
-import ClipPath from "../helpers/clip-path";
 import {
   PropTypes as CustomPropTypes, Helpers, Events, VictoryTransition, VictoryLabel,
-  VictoryContainer, VictoryTheme
+  VictoryContainer, VictoryTheme, Bar, ClipPath
 } from "victory-core";
 
 const fallbackProps = {
@@ -29,14 +27,19 @@ export default class VictoryBar extends React.Component {
   static role = "bar";
 
   static defaultTransitions = {
+    onLoad: {
+      duration: 2000,
+      before: () => ({ y: 0, y1: 0, y0: 0 }),
+      after: (datum) => ({ y: datum.y, y1: datum.y1, y0: datum.y0 })
+    },
     onExit: {
       duration: 500,
       before: () => ({ y: 0, yOffset: 0 })
     },
     onEnter: {
       duration: 500,
-      before: () => ({ y: 0, yOffset: 0 }),
-      after: (datum) => ({ y: datum.y, yOffset: datum.yOffset })
+      before: () => ({ y: 0, y1: 0, y0: 0 }),
+      after: (datum) => ({ y: datum.y, y1: datum.y1, y0: datum.y0 })
     }
   };
 
@@ -408,19 +411,20 @@ export default class VictoryBar extends React.Component {
         {}, dataProps, {events: Events.getPartialEvents(dataEvents, key, dataProps)}
       ));
 
-      const labelProps = defaults(
-        {index, key: `${role}-label-${key}`},
-        this.getEventState(key, "labels"),
-        this.getSharedEventState(key, "labels"),
-        labelComponent.props,
-        this.baseProps[key].labels
-      );
-
-      if (labelProps && labelProps.text) {
-        const labelEvents = this.getEvents(props, "labels", key);
-        barLabelComponents[index] = React.cloneElement(labelComponent, assign({
-          events: Events.getPartialEvents(labelEvents, key, labelProps)
-        }, labelProps));
+      if (this.baseProps[key].labels || this.props.events || this.props.sharedEvents) {
+        const labelProps = defaults(
+          {index, key: `${role}-label-${key}`},
+          this.getEventState(key, "labels"),
+          this.getSharedEventState(key, "labels"),
+          labelComponent.props,
+          this.baseProps[key].labels
+        );
+        if (labelProps && labelProps.text) {
+          const labelEvents = this.getEvents(props, "labels", key);
+          barLabelComponents[index] = React.cloneElement(labelComponent, assign({
+            events: Events.getPartialEvents(labelEvents, key, labelProps)
+          }, labelProps));
+        }
       }
     }
     return barLabelComponents.length > 0 ?
@@ -458,6 +462,7 @@ export default class VictoryBar extends React.Component {
       clipHeight: (props.clipHeight || props.height),
       clipPadding
     });
+
     return React.cloneElement(
       props.groupComponent,
       { role: "presentation", style: style.parent},

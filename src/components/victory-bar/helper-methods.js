@@ -35,18 +35,15 @@ export default {
   getBarPosition(props, datum, scale) {
     const defaultMin = Scale.getType(scale.y) === "log" ?
       1 / Number.MAX_SAFE_INTEGER : 0;
-    const yOffset = datum.yOffset || 0;
-    const xOffset = datum.xOffset || 0;
-    const y0 = yOffset || defaultMin;
-    const y = datum.y + yOffset;
-    const x = datum.x + xOffset;
+
+    const y0 = datum.y0 || defaultMin;
     const formatValue = (value, axis) => {
       return datum[axis] instanceof Date ? new Date(value) : value;
     };
     return {
-      x: scale.x(formatValue(x, "x")),
+      x: scale.x(formatValue(datum.x1 || datum.x, "x")),
       y0: scale.y(formatValue(y0, "y")),
-      y: scale.y(formatValue(y, "y"))
+      y: scale.y(formatValue(datum.y1 || datum.y, "y"))
     };
   },
 
@@ -67,9 +64,8 @@ export default {
   },
 
   getLabel(props, datum, index) {
-    const propsLabel = Array.isArray(props.labels) ?
-      props.labels[index] : Helpers.evaluateProp(props.labels, datum);
-    return datum.label || propsLabel;
+    return datum.label || (Array.isArray(props.labels) ?
+      props.labels[index] : Helpers.evaluateProp(props.labels, datum));
   },
 
   getLabelAnchors(datum, horizontal) {
@@ -128,28 +124,34 @@ export default {
         position
       );
 
-      const labelStyle = this.getLabelStyle(style.labels, datum);
-      const labelPadding = this.getlabelPadding(labelStyle, datum, horizontal);
-      const anchors = this.getLabelAnchors(datum, horizontal);
-      const labelProps = {
-        style: labelStyle,
-        x: horizontal ? position.y + labelPadding.x : position.x + labelPadding.x,
-        y: horizontal ? position.x + labelPadding.y : position.y - labelPadding.y,
-        y0: position.y0,
-        text: this.getLabel(props, datum, index),
-        index,
-        scale,
-        datum: dataProps.datum,
-        textAnchor: labelStyle.textAnchor || anchors.text,
-        verticalAnchor: labelStyle.verticalAnchor || anchors.vertical,
-        angle: labelStyle.angle
-      };
-
       childProps[eventKey] = {
-        data: dataProps,
-        labels: labelProps
+        data: dataProps
       };
+      const text = this.getLabel(props, datum, index);
+      if (text || props.events || props.sharedEvents) {
+        childProps[eventKey].labels = this.getLabelProps(dataProps, text, style);
+      }
     }
     return childProps;
+  },
+
+  getLabelProps(dataProps, text, calculatedStyle) {
+    const { datum, horizontal, x, y, y0, index, scale } = dataProps;
+    const labelStyle = this.getLabelStyle(calculatedStyle.labels, datum);
+    const labelPadding = this.getlabelPadding(labelStyle, datum, horizontal);
+    const anchors = this.getLabelAnchors(datum, horizontal);
+    return {
+      style: labelStyle,
+      x: horizontal ? y + labelPadding.x : x + labelPadding.x,
+      y: horizontal ? x + labelPadding.y : y - labelPadding.y,
+      y0,
+      text,
+      index,
+      scale,
+      datum,
+      textAnchor: labelStyle.textAnchor || anchors.text,
+      verticalAnchor: labelStyle.verticalAnchor || anchors.vertical,
+      angle: labelStyle.angle
+    };
   }
 };

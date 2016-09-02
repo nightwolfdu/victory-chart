@@ -20,12 +20,28 @@ export default {
       style: Helpers.evaluateStyle(style.data, data)
     };
 
+    const baseProps = {
+      parent: { style: style.parent, width, height, scale, data },
+      all: {
+        data: dataProps
+      }
+    };
+
     const text = Helpers.evaluateProp(label, data);
+    if (text || props.events || props.sharedEvents) {
+      baseProps.all.labels = this.getLabelProps(dataProps, text, style);
+    }
+
+    return baseProps;
+  },
+
+  getLabelProps(dataProps, text, calculatedStyle) {
+    const { data, scale } = dataProps;
     const lastData = last(data);
-    const labelStyle = Helpers.evaluateStyle(style.labels, data) || {};
+    const labelStyle = Helpers.evaluateStyle(calculatedStyle.labels, data) || {};
     const labelPadding = labelStyle.padding || 0;
 
-    const labelProps = {
+    return {
       key: "area-label",
       x: lastData ? scale.x(lastData.x) + labelPadding : 0,
       y: lastData ? scale.y(lastData.y1) : 0,
@@ -37,14 +53,6 @@ export default {
       data,
       scale,
       text
-    };
-
-    return {
-      parent: {style: style.parent, width, height, scale, data},
-      all: {
-        data: dataProps,
-        labels: labelProps
-      }
     };
   },
 
@@ -86,9 +94,9 @@ export default {
     const minY = Math.min(...domainY) > 0 ? Math.min(...domainY) : defaultMin;
 
     return data.map((datum) => {
-      const y1 = datum.yOffset ? datum.yOffset + datum.y : datum.y;
-      const y0 = datum.yOffset || minY;
-      return assign({y0, y1}, datum);
+      const y1 = datum.y1 || datum.y;
+      const y0 = datum.y0 || minY;
+      return assign({}, datum, {y0, y1});
     });
   }
 };
