@@ -8,8 +8,8 @@ describe("helpers/axissync", () => {
       { domain: [124.12312222, 3523], style: {}, width: 150, orientation: "bottom" }]
     );
     expect(
-      res[0].length
-    ).to.be.eql(17);
+      res[0]
+    ).to.have.length(17);
   });
   it("return expected tick count, based on size of domain labels height", () => {
     expect(
@@ -22,8 +22,8 @@ describe("helpers/axissync", () => {
           domain: [1.00000000000000000000001, 3],
           style: { tickLabels: { fontSize: 20 } }, orientation: "left", height: 200
         }
-      ])[0].length
-    ).to.be.eql(11);
+      ])[0]
+    ).to.have.length(11);
   });
   it("return syncronized ticks with same ticks count", () => {
     const syncedAxises = syncAxis(
@@ -38,8 +38,8 @@ describe("helpers/axissync", () => {
         }
       ]
     );
-    expect(syncedAxises[0].length).to.be.eql(7);
-    expect(syncedAxises[1].length).to.be.eql(7);
+    expect(syncedAxises[0]).to.have.length(7);
+    expect(syncedAxises[1]).to.have.length(7);
   });
   it("return expected ticks", () => {
     const syncedAxises = syncAxis(
