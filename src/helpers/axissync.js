@@ -14,7 +14,7 @@ const fallbackProps = {
 };
 
 const getShortestString = (domain) => {
-  const domainStrs = d3.scaleLinear().domain(domain).nice().domain().map((elem) => String(elem));// victory
+  const domainStrs = d3.scaleLinear().domain(domain).nice().domain().map((elem) => String(elem));
   return domainStrs.reduce((short, cur) => cur.length < short.length ? cur : short, domainStrs[0]);
 };
 
@@ -23,7 +23,7 @@ const getSize = (isVertical, sizeObj) => isVertical ? sizeObj.height : sizeObj.w
 const getLabelCount = (isVertical, props, size) =>
   Math.max(Math.floor((getSize(isVertical, props)) / size), 2);
 
-const getTicksAndInterval = (axisProps, isVertical, tickCount) => {
+const getTicksAndInterval = (axisProps, tickCount) => {
   const domain = AxisHelper.getDomain(axisProps);
   const scaleFunc = AxisHelper.getScale(axisProps);
   const props = merge(axisProps, { tickCount });
@@ -63,7 +63,7 @@ const getTicksForAxisWithSync = (isVertical, axisGroup) => {
     axisGroup.map((axisObj) => {
       return Object.assign(
         getTicksAndInterval(
-          axisObj.props, isVertical, getLabelCount(isVertical, axisObj.props, maxMinSize)
+          axisObj.props, getLabelCount(isVertical, axisObj.props, maxMinSize)
         ), { index: axisObj.index }
       );
     })
@@ -78,9 +78,9 @@ const getTicksWithoutSync = (isVertical, axisGroup) =>
         defaults(axisObj.props.style.tickLabels, { fontSize: defaultFontSize })
       )
     );
-    return Object.assign( //merge
+    return merge(
       getTicksAndInterval(
-        axisObj.props, isVertical, getLabelCount(isVertical, axisObj.props, minSize)
+        axisObj.props, getLabelCount(isVertical, axisObj.props, minSize)
       ), { index: axisObj.index }
     );
   });
