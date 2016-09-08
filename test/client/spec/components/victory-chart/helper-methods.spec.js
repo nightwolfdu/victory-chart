@@ -52,16 +52,6 @@ describe("victory-chart/helpers-methods", () => {
       expect(result).to.have.length(1);
       expect(result[0].props).to.eql(axis.props);
     });
-
-    it("only ever returns one axis of a particular type", () => {
-      const children = [
-        getVictoryAxis({dependentAxis: true}),
-        getVictoryAxis({dependentAxis: true, orientation: "right"})
-      ];
-      const result = Helpers.getChildComponents({children}, defaultAxes);
-      expect(result).to.have.length(1);
-      expect(result[0].props).to.eql(children[0].props);
-    });
   });
 
   describe("getDataComponents", () => {

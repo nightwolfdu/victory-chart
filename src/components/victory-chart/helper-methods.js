@@ -22,16 +22,6 @@ export default {
     if (axisComponents.dependent.length === 0 && axisComponents.independent.length === 0) {
       return [defaultAxes.independent, defaultAxes.dependent].concat(childComponents);
     }
-    if (axisComponents.dependent.length > 1 || axisComponents.independent.length > 1) {
-      const msg = `Only one VictoryAxis component of each axis type is allowed when ` +
-        `using the VictoryChart wrapper. Only the first axis will be used. Please compose ` +
-        `multi-axis charts manually`;
-      Log.warn(msg);
-      const dataComponents = this.getDataComponents(childComponents);
-      return Collection.removeUndefined(
-        [axisComponents.dependent[0], axisComponents.independent[0]].concat(dataComponents)
-      );
-    }
     return childComponents;
   },
 
