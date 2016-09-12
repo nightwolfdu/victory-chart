@@ -1,4 +1,4 @@
-import { assign, defaults, flatten, isFunction, partialRight, uniq } from "lodash";
+import { assign, defaults, flatten, isFunction, partialRight, uniq, groupBy } from "lodash";
 import React from "react";
 import Axis from "./axis";
 import Data from "./data";
@@ -24,6 +24,27 @@ export default {
     return Domain.cleanDomain(this.getDomainFromChildren(props, axis, childComponents),
       props,
       axis);
+  },
+
+  getDomains(props, axis, childComponents) {
+    childComponents = childComponents || React.Children.toArray(props.children);
+    const propsDomain = Domain.getDomainFromProps(props, axis);
+    const componentWithAxises = childComponents.map((component) =>
+      ({ valueAxis: component.props.valueAxis,
+         argumentAxis: component.props.argumentAxis,
+         component })
+    );
+    if (propsDomain) {
+      return propsDomain;
+    }
+    const groupByAxis = groupBy(componentWithAxises, axis === "y" ? "valueAxis" : "argumentAxis");
+    const result = Object.keys(groupByAxis).map((axisName) => {
+      const childs = groupByAxis[axisName].map((obj) => obj.component);
+      const domainFromChildren = this.getDomainFromChildren(props, axis, childs);
+      const domain = Domain.cleanDomain(domainFromChildren, props, axis);
+      return { axisName, domain };
+    });
+    return result;
   },
 
   setAnimationState(nextProps) {
@@ -101,7 +122,6 @@ export default {
     const horizontalChildren = childComponents.some((child) => child.props.horizontal);
     const horizontal = props && props.horizontal || horizontalChildren.length > 0;
     const currentAxis = Axis.getCurrentAxis(axis, horizontal);
-
     while (childrenLength > 0) {
       const child = children[--childrenLength];
 
@@ -211,21 +231,23 @@ export default {
     };
   },
 
+  getAxisNameFromPropsAndAxis(props, axis) {
+    return props.axisName || props[axis === "x" ? "argumentAxis" : "valueAxis"] || "undefined";
+  },
+
   getStringsFromCategories(childComponents, axis) { // eslint-disable-line max-statements
     const strings = [];
     let stringsLength = 0;
-
     const children = childComponents.slice(0);
     let childrenLength = children.length;
-
     while (childrenLength > 0) {
       const child = children[--childrenLength];
-
       if (child.props && child.props.categories) {
         const newStrings = Data.getStringsFromCategories(child.props, axis);
         const newStringsLength = newStrings.length;
+        const axisName = this.getAxisNameFromPropsAndAxis(child.props, axis);
         for (let index = 0; index < newStringsLength; index++) {
-          strings[stringsLength++] = newStrings[index];
+          strings[stringsLength++] = {axisName, strings: newStrings[index]};
         }
       } else if (child.props && child.props.children) {
         const newChildren = React.Children.toArray(child.props.children);
@@ -251,17 +273,20 @@ export default {
 
       if (child.props && child.props.data) {
         const newStrings = Helpers.getStringsFromData(child.props, axis);
+        const axisName = this.getAxisNameFromPropsAndAxis(child.props, axis);
+
         const newStringsLength = newStrings.length;
         for (let index = 0; index < newStringsLength; index++) {
-          strings[stringsLength++] = newStrings[index];
+          strings[stringsLength++] = {axisName, strings: newStrings[index]};
         }
       } else if (child.type && isFunction(child.type.getData)) {
         const data = flatten(child.type.getData(child.props));
+        const axisName = this.getAxisNameFromPropsAndAxis(child.props, axis);
         const attr = axis === "x" ? "xName" : "yName";
         for (let index = 0; index < data.length; index++) {
           const datum = data[index];
           if (datum[attr]) {
-            strings[stringsLength++] = datum[attr];
+            strings[stringsLength++] = {axisName, strings: datum[attr]};
           }
         }
       } else if (child.props && child.props.children) {
@@ -272,17 +297,41 @@ export default {
         }
       }
     }
-
-    return strings;
+    const groupedStrings = groupBy(strings, (obj) => obj.axisName);
+    const res = Object.keys(groupedStrings)
+      .map((axisName) => ({
+        axisName,
+        strings: uniq(flatten(groupedStrings[axisName].map((obj) => obj.strings)))
+      }));
+    return res;
   },
 
   getStringsFromChildren(props, axis, childComponents) {
     childComponents = childComponents || React.Children.toArray(props.children);
-    const axisComponent = Axis.getAxisComponent(childComponents, axis);
-    const axisStrings = axisComponent ? Data.getStringsFromAxes(axisComponent.props, axis) : [];
+    const axisComponents = Axis.getAxisComponents(childComponents, axis);
+    const axisStrings = axisComponents && axisComponents.length
+      ? axisComponents.map((axisObj) =>
+        ({
+          axisName: String(axisObj.props.axisName),
+          strings: Data.getStringsFromAxes(axisObj.props, axis)
+        })
+      )
+      : [];
     const categoryStrings = this.getStringsFromCategories(childComponents, axis);
     const dataStrings = this.getStringsFromData(childComponents, axis);
-    return uniq(flatten([...categoryStrings, ...dataStrings, ...axisStrings]));
+    const axisNames = uniq(flatten(
+      [axisStrings.map((obj) => obj.axisName),
+       categoryStrings.map((obj) => obj.axisName),
+        dataStrings.map((obj) => obj.axisName)]
+    ));
+    const res = axisNames.map((axisName) => {
+      return ({
+        axisName,
+        strings: uniq(flatten(flatten([axisStrings, categoryStrings, dataStrings]
+          .map((arr) => arr.filter((obj) => obj.axisName === axisName).map((obj) => obj.strings)))))
+      });
+    }).filter((obj) => obj.strings.length);
+    return res;
   },
 
   getCategories(props, axis) {

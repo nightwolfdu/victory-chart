@@ -35,6 +35,19 @@ export default {
     };
     return this.findAxisComponents(childComponents, matchesAxis)[0];
   },
+  /**
+   * Returns a array of axis component of the desired axis type (x or y)
+   * @param {Array} childComponents: an array of children
+   * @param {String} axis: desired axis either "x" or "y".
+   * @returns {ReactComponent} an axis component of the desired axis or undefined
+   */
+  getAxisComponents(childComponents, axis) {
+    const matchesAxis = (component) => {
+      const type = component.type.getAxis(component.props);
+      return type === axis;
+    };
+    return this.findAxisComponents(childComponents, matchesAxis);
+  },
 
   /**
    * Returns all axis components that pass a given predicate

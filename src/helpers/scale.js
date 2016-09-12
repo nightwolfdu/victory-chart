@@ -52,6 +52,26 @@ export default {
       return isFunction(scale) ? scale : d3Scale[this.toNewName(scale)]();
     }
   },
+  getScalesFromProps(props, axis) {
+    if (!this.isScaleDefined(props, axis)) {
+      return undefined;
+    }
+    const scale = props.scale[axis] || props.scale;
+    if (typeof scale === "object") {
+      return Object.keys(scale).map((axisName) => {
+        const sc = scale[axisName];
+        if (this.validScale(sc)) {
+          return { axisName, scale: isFunction(sc) ? sc : d3Scale[this.toNewName(sc)]()};
+        }
+      });
+    }
+    if (this.validScale(scale)) {
+      return [{
+        axisName: "undefined",
+        scale: isFunction(scale) ? scale : d3Scale[this.toNewName(scale)]()
+      }];
+    }
+  },
 
   getScaleTypeFromData(props, axis) {
     if (!props.data) {

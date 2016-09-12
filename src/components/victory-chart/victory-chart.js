@@ -171,6 +171,10 @@ export default class VictoryChart extends React.Component {
       PropTypes.shape({
         x: CustomPropTypes.scale,
         y: CustomPropTypes.scale
+      }),
+      PropTypes.shape({
+        x: PropTypes.oneOfType([CustomPropTypes.scale, PropTypes.object]),
+        y: PropTypes.oneOfType([CustomPropTypes.scale, PropTypes.object])
       })
     ]),
     /**
@@ -266,6 +270,11 @@ export default class VictoryChart extends React.Component {
   getAxisProps(child, props, calculatedProps) {
     const { domain, scale, originSign } = calculatedProps;
     const axis = child.type.getAxis(child.props);
+    const axisName = Wrapper.getAxisNameFromPropsAndAxis(child.props, axis);
+    const thisDomain = domain[axis].filter((obj) => obj.axisName === axisName)[0].domain;
+    const thisScale = scale[axis].filter((obj) => obj.axisName === axisName)[0].scale;
+    const thisOriginSign = originSign[axis]
+      .filter((obj) => obj.axisName === axisName)[0].originSign;
     const axisOffset = ChartHelpers.getAxisOffset(props, calculatedProps);
     const tickValues = ChartHelpers.getTicks(calculatedProps, axis, child);
     const tickFormat =
@@ -273,10 +282,10 @@ export default class VictoryChart extends React.Component {
     const offsetY = axis === "y" ? undefined : axisOffset.y;
     const offsetX = axis === "x" ? undefined : axisOffset.x;
     const crossAxis = child.props.crossAxis === false ? false : true;
-    const orientation = Axis.getOrientation(child, axis, originSign[axis]);
+    const orientation = Axis.getOrientation(child, axis, thisOriginSign);
     return {
-      domain: domain[axis],
-      scale: scale[axis],
+      domain: thisDomain,
+      scale: thisScale,
       tickValues,
       tickFormat,
       offsetY: child.props.offsetY || offsetY,
@@ -286,67 +295,105 @@ export default class VictoryChart extends React.Component {
     };
   }
 
+  filterObjectByAxis(objList, needProperty, axisName) {
+    return objList ? objList.filter((obj) => obj.axisName === axisName)[0][needProperty] : objList;
+  }
+
   getChildProps(child, props, calculatedProps) {
     const axisChild = Axis.findAxisComponents([child]);
     if (axisChild.length > 0) {
       return this.getAxisProps(axisChild[0], props, calculatedProps);
     }
+    const xAxisName = Wrapper.getAxisNameFromPropsAndAxis(child.props, "x");
+    const yAxisName = Wrapper.getAxisNameFromPropsAndAxis(child.props, "y");
+    const thisDomain = {
+      x: this.filterObjectByAxis(calculatedProps.domain.x, "domain", xAxisName),
+      y: this.filterObjectByAxis(calculatedProps.domain.y, "domain", yAxisName)
+    };
+    const thisScale = {
+      x: this.filterObjectByAxis(calculatedProps.scale.x, "scale", xAxisName),
+      y: this.filterObjectByAxis(calculatedProps.scale.y, "scale", yAxisName)
+    };
+    const thisCategories = {
+      x: this.filterObjectByAxis(calculatedProps.categories.x, "strings", xAxisName),
+      y: this.filterObjectByAxis(calculatedProps.categories.y, "strings", yAxisName)
+    };
     return {
-      domain: calculatedProps.domain,
-      scale: calculatedProps.scale,
-      categories: calculatedProps.categories
+      domain: thisDomain,
+      scale: thisScale,
+      categories: thisCategories
     };
   }
 
   getCalculatedProps(props, childComponents) {
     const style = this.getStyles(props);
     const horizontal = childComponents.some((component) => component.props.horizontal);
+    const getDefaultScaleWithName = () => (
+      { axisName: "undefined", scale: Scale.getDefaultScale() }
+    );
+    const getScaleOrDefault = (axis, components, thisProps) =>
+      Scale.getScalesFromProps(thisProps, axis) ||
+      (components[axis] &&
+        components[axis].map((component) => component.type.getScale(component.props))
+      ) || getDefaultScaleWithName();
+    const getScaleWithDefault = (scaleList) =>
+      scaleList.some((scaleObj) => scaleObj.axisName === "undefined")
+        ? scaleList
+        : scaleList.concat(getDefaultScaleWithName());
+
     const axisComponents = {
-      x: Axis.getAxisComponent(childComponents, "x"),
-      y: Axis.getAxisComponent(childComponents, "y")
+      x: Axis.getAxisComponents(childComponents, "x"),
+      y: Axis.getAxisComponents(childComponents, "y")
     };
     const domain = {
-      x: ChartHelpers.getDomain(props, "x", childComponents),
-      y: ChartHelpers.getDomain(props, "y", childComponents)
+      x: ChartHelpers.getDomains(props, "x", childComponents),
+      y: ChartHelpers.getDomains(props, "y", childComponents)
     };
     const range = {
       x: Helpers.getRange(props, "x"),
       y: Helpers.getRange(props, "y")
     };
-    const baseScale = {
-      x: Scale.getScaleFromProps(props, "x") ||
-        axisComponents.x && axisComponents.x.type.getScale(axisComponents.x.props) ||
-        Scale.getDefaultScale(),
-      y: Scale.getScaleFromProps(props, "y") ||
-        axisComponents.y && axisComponents.y.type.getScale(axisComponents.y.props) ||
-        Scale.getDefaultScale()
-    };
+
     const scale = {
-      x: baseScale.x.domain(domain.x).range(range.x),
-      y: baseScale.y.domain(domain.y).range(range.y)
+      x: getScaleWithDefault(getScaleOrDefault("x", axisComponents, props)).map((scaleObj) => (
+        {
+          axisName: scaleObj.axisName,
+          scale: scaleObj.scale.domain(
+            domain.x.filter((domainObj) => domainObj.axisName === scaleObj.axisName)[0].domain
+          ).range(range.x)
+        })),
+      y: getScaleWithDefault(getScaleOrDefault("y", axisComponents, props)).map((scaleObj) => (
+        {
+          axisName: scaleObj.axisName,
+          scale: scaleObj.scale.domain(
+            domain.y.filter((domainObj) => domainObj.axisName === scaleObj.axisName)[0].domain
+          ).range(range.y)
+        }))
     };
-
     const origin = {
-      x: Axis.getOrigin(domain.x),
-      y: Axis.getOrigin(domain.y)
+      x: domain.x.map((obj) => ({ axisName: obj.axisName, origin: Axis.getOrigin(obj.domain) })),
+      y: domain.y.map((obj) => ({ axisName: obj.axisName, origin: Axis.getOrigin(obj.domain) }))
     };
-
     const originSign = {
-      x: Axis.getOriginSign(origin.x, domain.x),
-      y: Axis.getOriginSign(origin.y, domain.y)
+      x: origin.x.map((origObj) => ({
+        axisName: origObj.axisName,
+        originSign: Axis.getOriginSign(origObj.origin,
+          this.filterObjectByAxis(domain.x, "domain", origObj.axisName))
+      })),
+      y: origin.y.map((origObj) => ({
+        axisName: origObj.axisName,
+        originSign: Axis.getOriginSign(origObj.origin,
+          this.filterObjectByAxis(domain.y, "domain", origObj.axisName))
+      }))
     };
-
-    // TODO: check
     const categories = {
       x: Wrapper.getCategories(props, "x", childComponents),
       y: Wrapper.getCategories(props, "y", childComponents)
     };
-
     const stringMap = {
       x: ChartHelpers.createStringMap(props, "x", childComponents),
       y: ChartHelpers.createStringMap(props, "y", childComponents)
     };
-
     const defaultDomainPadding = ChartHelpers.getDefaultDomainPadding(childComponents, horizontal);
 
     return {
