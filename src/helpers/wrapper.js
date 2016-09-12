@@ -324,10 +324,14 @@ export default {
        categoryStrings.map((obj) => obj.axisName),
         dataStrings.map((obj) => obj.axisName)]
     ));
+    console.log(axisStrings.map((obj) => obj.strings));
+    console.log(categoryStrings.map((obj) => obj.strings));
+    console.log(dataStrings.map((obj) => obj.strings));
+
     const res = axisNames.map((axisName) => {
       return ({
         axisName,
-        strings: uniq(flatten(flatten([axisStrings, categoryStrings, dataStrings]
+        strings: uniq(flatten(flatten([dataStrings, categoryStrings, axisStrings]
           .map((arr) => arr.filter((obj) => obj.axisName === axisName).map((obj) => obj.strings)))))
       });
     }).filter((obj) => obj.strings.length);

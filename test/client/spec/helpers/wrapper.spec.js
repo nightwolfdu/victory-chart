@@ -78,20 +78,20 @@ describe("helpers/wrapper", () => {
       const props = {data: [{x: "one", y: 1}, {x: "red", y: 2}, {x: "cat", y: 3}]};
       const childComponents = [getVictoryLine(props)];
       const dataStrings = Wrapper.getStringsFromData(childComponents, "x");
-      expect(dataStrings).to.eql(["one", "red", "cat"]);
+      expect(dataStrings[0].strings).to.eql(["one", "red", "cat"]);
     });
 
     it("returns an array of strings from array-type data", () => {
       const props = {data: [["one", 1], ["red", 2], ["cat", 3]], x: 0, y: 1};
       const childComponents = [getVictoryLine(props)];
       const dataStrings = Wrapper.getStringsFromData(childComponents, "x");
-      expect(dataStrings).to.eql(["one", "red", "cat"]);
+      expect(dataStrings[0].strings).to.eql(["one", "red", "cat"]);
     });
 
     it("only returns strings, if data is mixed", () => {
       const props = {data: [{x: 1, y: 1}, {x: "three", y: 3}]};
       const childComponents = [getVictoryLine(props)];
-      expect(Wrapper.getStringsFromData(childComponents, "x")).to.eql(["three"]);
+      expect(Wrapper.getStringsFromData(childComponents, "x")[0]).to.deep.eql({ axisName: "undefined", strings: ["three"] });
     });
 
     it("returns an empty array when no strings are present", () => {

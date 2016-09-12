@@ -120,14 +120,14 @@ describe("victory-chart/helpers-methods", () => {
       const childComponents = [axisComponent];
       const stringResult = Helpers.createStringMap(props, "x", childComponents);
       expect(Wrapper.getStringsFromChildren).calledWith(props, "x", childComponents)
-        .and.returned(["a", "b", "c"]);
+        .and.returned([{axisName: "undefined", strings: ["a", "b", "c"]}]);
       expect(Data.getStringsFromAxes).calledWith(axisComponent.props, "x")
         .and.returned(["a", "b", "c"]);
       expect(Wrapper.getStringsFromCategories).calledWith(childComponents, "x")
         .and.returned([]);
       expect(Wrapper.getStringsFromData).calledWith(childComponents, "x")
         .and.returned([]);
-      expect(stringResult).to.eql({a: 1, b: 2, c: 3});
+      expect(stringResult[0].stringMap).to.eql({a: 1, b: 2, c: 3});
     });
 
     it("returns a stringMap from axis tickValues, and string data", () => {
@@ -137,14 +137,14 @@ describe("victory-chart/helpers-methods", () => {
       const childComponents = [axisComponent, lineComponent];
       const stringResult = Helpers.createStringMap(props, "x", childComponents);
       expect(Wrapper.getStringsFromChildren).calledWith(props, "x", childComponents)
-        .and.returned(["a", "b", "c", "d"]);
+        .and.returned([{ axisName: "undefined", strings: [ "a", "b", "c", "d"] }]);
       expect(Data.getStringsFromAxes).calledWith(axisComponent.props, "x")
         .and.returned(["c", "d"]);
       expect(Wrapper.getStringsFromCategories).calledWith(childComponents, "x")
         .and.returned([]);
       expect(Wrapper.getStringsFromData).calledWith(childComponents, "x")
-        .and.returned(["a", "b"]);
-      expect(stringResult).to.eql({a: 1, b: 2, c: 3, d: 4});
+        .and.returned([{ axisName: "undefined", strings: ["a", "b"] }]);
+      expect(stringResult[0].stringMap).to.eql({ a: 1, b: 2, c: 3, d: 4 });
     });
   });
 

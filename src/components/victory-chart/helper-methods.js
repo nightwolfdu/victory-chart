@@ -180,7 +180,8 @@ export default {
     const allStrings = Wrapper.getStringsFromChildren(props, axis, childComponents);
     return allStrings.length === 0 ? null :
       allStrings.map((obj) => ({
-        axisName: obj.axisName, stringMap: obj.strings.reduce((memo, string, index) => {
+        axisName: obj.axisName,
+        stringMap: obj.strings.reduce((memo, string, index) => {
           memo[string] = index + 1;
           return memo;
         }, {})
